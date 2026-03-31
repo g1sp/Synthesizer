@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synthesizer — Multi-AI Synthesis Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+        * {
+            font-family: 'IBM Plex Sans', sans-serif;
+        }
+
+        .font-mono {
+            font-family: 'Space Mono', monospace;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1a1f3a 50%, #16213e 100%);
+            min-height: 100vh;
+            color: #e2e8f0;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+        }
+
+        .input-field {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            color: #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: rgba(59, 130, 246, 0.6);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            background: rgba(30, 41, 59, 0.95);
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .pulse-dot {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .tool-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #60a5fa;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tool-badge.gemini {
+            background: rgba(249, 115, 22, 0.1);
+            border-color: rgba(249, 115, 22, 0.3);
+            color: #fb923c;
+        }
+
+        .tool-badge.claude {
+            background: rgba(139, 92, 246, 0.1);
+            border-color: rgba(139, 92, 246, 0.3);
+            color: #c4b5fd;
+        }
+
+        .tool-badge.openai {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: rgba(34, 197, 94, 0.3);
+            color: #86efac;
+        }
+
+        .response-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .response-card:hover {
+            border-color: rgba(148, 163, 184, 0.4);
+            background: rgba(15, 23, 42, 0.7);
+        }
+
+        .tab-button {
+            padding: 12px 16px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(30, 41, 59, 0.4);
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .tab-button.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.5);
+            color: #3b82f6;
+        }
+
+        .tab-button:hover {
+            border-color: rgba(148, 163, 184, 0.3);
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(59, 130, 246, 0.2);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .stagger-item {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .stagger-item:nth-child(1) { animation-delay: 0.1s; }
+        .stagger-item:nth-child(2) { animation-delay: 0.2s; }
+        .stagger-item:nth-child(3) { animation-delay: 0.3s; }
+
+        .settings-icon {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #94a3b8;
+        }
+
+        .settings-icon:hover {
+            color: #3b82f6;
+            transform: rotate(20deg);
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #0f172a 0%, #1a1f3a 50%, #16213e 100%);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 24px;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .modal-close:hover {
+            color: #3b82f6;
+        }
+
+        .api-key-group {
+            margin-bottom: 24px;
+        }
+
+        .api-key-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #e2e8f0;
+            font-size: 14px;
+        }
+
+        .api-key-status {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #94a3b8;
+        }
+
+        .api-key-status.configured {
+            background: #22c55e;
+        }
+
+        .api-key-input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .api-key-input:focus {
+            outline: none;
+            border-color: rgba(59, 130, 246, 0.6);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            background: rgba(30, 41, 59, 0.95);
+        }
+
+        .security-warning {
+            background: rgba(249, 115, 22, 0.1);
+            border: 1px solid rgba(249, 115, 22, 0.3);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 24px;
+            font-size: 12px;
+            color: #fed7aa;
+            line-height: 1.5;
+        }
+
+        .security-warning strong {
+            color: #fb923c;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-clear {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+
+        .btn-clear:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        .api-info {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        .timeline-dot {
+            width: 12px;
+            height: 12px;
+            background: #3b82f6;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .timeline-dot::after {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: rgba(59, 130, 246, 0.2);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid #3b82f6;
+            padding: 12px 16px;
+            border-radius: 4px;
+            font-family: 'Space Mono', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+        }
+
+        .merge-visualization {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+            gap: 12px;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        .merge-box {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: #60a5fa;
+        }
+
+        .merge-arrow {
+            font-size: 20px;
+            color: rgba(59, 130, 246, 0.4);
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(4px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen py-8 px-4">
+        <!-- Header -->
+        <div class="max-w-6xl mx-auto mb-12">
+            <div class="flex justify-between items-start">
+                <div class="text-center flex-1">
+                    <h1 class="text-5xl font-bold mb-2 tracking-tight">
+                        <span class="bg-gradient-to-r from-blue-400 to-blue-500 bg-clip-text text-transparent">Synthesizer</span>
+                    </h1>
+                    <p class="text-slate-400 text-lg">Multi-AI synthesis engine powered by Gemini, Claude & ChatGPT</p>
+                </div>
+                <button id="settingsBtn" class="settings-icon" title="Configure API Keys" aria-label="Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m2.12 2.12l4.24 4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m2.12-2.12l4.24-4.24M19.78 19.78l-4.24-4.24m-2.12-2.12l-4.24-4.24"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Container -->
+        <div class="max-w-6xl mx-auto">
+            <!-- Input Section -->
+            <div class="glass-panel p-8 mb-8">
+                <div class="mb-6">
+                    <label class="block text-sm font-semibold text-slate-300 mb-3">
+                        <span class="flex items-center gap-2">
+                            <span class="timeline-dot"></span>
+                            Enter your prompt
+                        </span>
+                    </label>
+                    <textarea
+                        id="promptInput"
+                        class="input-field w-full h-32 p-4 rounded-lg resize-none"
+                        placeholder="What would you like the three AI models to synthesize? Be specific and detailed for best results..."
+                    ></textarea>
+                </div>
+
+                <button
+                    id="submitBtn"
+                    class="submit-btn w-full py-3 px-6 rounded-lg text-white font-semibold flex items-center justify-center gap-2 transition-all"
+                >
+                    <span id="btnText">Synthesize</span>
+                </button>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsContainer" style="display: none;" class="fade-in">
+                <!-- Processing Status -->
+                <div class="glass-panel p-6 mb-8">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-slate-400 text-sm mb-2">Synthesis Status</p>
+                            <p class="text-white font-semibold">
+                                <span id="processingStatus">Processing...</span>
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-slate-400 text-sm mb-2">Processing Time</p>
+                            <p class="text-white font-mono text-lg" id="processingTime">—</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Navigation -->
+                <div class="mb-8 flex gap-2 overflow-x-auto">
+                    <button class="tab-button active" data-tab="round1">Round 1: Initial Responses</button>
+                    <button class="tab-button" data-tab="round2">Round 2: Refined Responses</button>
+                    <button class="tab-button" data-tab="merged">Final Synthesis</button>
+                    <button class="tab-button" data-tab="factCheck">Fact-Check Results</button>
+                </div>
+
+                <!-- Round 1 Content -->
+                <div id="round1Content" class="tab-content">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="response-card stagger-item">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-semibold text-white">Gemini</h3>
+                                <span class="tool-badge gemini">Gemini</span>
+                            </div>
+                            <div class="text-slate-300 text-sm leading-relaxed" id="gemini-r1">
+                                <div class="spinner mx-auto"></div>
+                            </div>
+                        </div>
+
+                        <div class="response-card stagger-item">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-semibold text-white">Claude</h3>
+                                <span class="tool-badge claude">Claude</span>
+                            </div>
+                            <div class="text-slate-300 text-sm leading-relaxed" id="claude-r1">
+                                <div class="spinner mx-auto"></div>
+                            </div>
+                        </div>
+
+                        <div class="response-card stagger-item">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-semibold text-white">ChatGPT</h3>
+                                <span class="tool-badge openai">ChatGPT</span>
+                            </div>
+                            <div class="text-slate-300 text-sm leading-relaxed" id="openai-r1">
+                                <div class="spinner mx-auto"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Round 2 Content -->
+                <div id="round2Content" class="tab-content" style="display: none;">
+                    <div class="mb-6">
+                        <p class="text-slate-400 text-sm mb-4">
+                            <span class="inline-block">→</span>
+                            Each model has been shown the other two responses and has refined its output
+                        </p>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="response-card stagger-item">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-semibold text-white">Gemini Refined</h3>
+                                <span class="tool-badge gemini">Gemini</span>
+                            </div>
+                            <div class="text-slate-300 text-sm leading-relaxed" id="gemini-r2">
+                                <div class="spinner mx-auto"></div>
+                            </div>
+                        </div>
+
+                        <div class="response-card stagger-item">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-semibold text-white">Claude Refined</h3>
+                                <span class="tool-badge claude">Claude</span>
+                            </div>
+                            <div class="text-slate-300 text-sm leading-relaxed" id="claude-r2">
+                                <div class="spinner mx-auto"></div>
+                            </div>
+                        </div>
+
+                        <div class="response-card stagger-item">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-semibold text-white">ChatGPT Refined</h3>
+                                <span class="tool-badge openai">ChatGPT</span>
+                            </div>
+                            <div class="text-slate-300 text-sm leading-relaxed" id="openai-r2">
+                                <div class="spinner mx-auto"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Merged Content -->
+                <div id="mergedContent" class="tab-content" style="display: none;">
+                    <div class="glass-panel p-8">
+                        <div class="mb-6">
+                            <div class="merge-visualization">
+                                <div class="merge-box text-xs">Gemini</div>
+                                <div class="merge-arrow">→</div>
+                                <div class="merge-box text-xs">Claude</div>
+                                <div class="merge-arrow">→</div>
+                                <div class="merge-box text-xs">ChatGPT</div>
+                                <div class="merge-arrow">→</div>
+                                <div class="merge-box bg-blue-500 bg-opacity-20 border-blue-500 border-opacity-50 text-blue-300">MERGED</div>
+                            </div>
+                        </div>
+                        <h3 class="text-xl font-semibold text-white mb-6">Final Synthesized Output</h3>
+                        <div class="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap" id="mergedOutput">
+                            <div class="spinner mx-auto"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fact-Check Content -->
+                <div id="factCheckContent" class="tab-content" style="display: none;">
+                    <div class="glass-panel p-8">
+                        <h3 class="text-xl font-semibold text-white mb-6">Fact-Check Analysis</h3>
+                        <div class="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap" id="factCheckResults">
+                            <p class="text-slate-400">No fact-check data available. Did you include a Zillow URL in your prompt?</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reset Button -->
+                <div class="mt-8 text-center">
+                    <button
+                        id="resetBtn"
+                        class="px-6 py-2 rounded-lg border border-slate-500 text-slate-300 hover:border-blue-500 hover:text-blue-400 transition-colors font-semibold text-sm"
+                    >
+                        ← Start New Synthesis
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>API Configuration</h2>
+                <button id="closeSettingsBtn" class="modal-close" title="Close settings">&times;</button>
+            </div>
+
+            <div class="security-warning">
+                <strong>⚠️ Security Notice:</strong> Your API keys are stored in browser localStorage. Anyone with access to this browser can see them. Please clear your keys after use, or use keys with limited permissions. Never commit keys to version control.
+            </div>
+
+            <!-- Gemini API Key -->
+            <div class="api-key-group">
+                <label class="api-key-label">
+                    <span class="api-key-status" id="geminiStatus"></span>
+                    Google Gemini API Key
+                </label>
+                <input
+                    type="password"
+                    id="geminiKeyInput"
+                    class="api-key-input"
+                    placeholder="AIz..."
+                    autocomplete="off"
+                />
+                <div class="api-info">
+                    Get your key at: <a href="https://makersuite.google.com/app/apikey" target="_blank" style="color: #60a5fa;">makersuite.google.com/app/apikey</a>
+                </div>
+            </div>
+
+            <!-- Claude API Key -->
+            <div class="api-key-group">
+                <label class="api-key-label">
+                    <span class="api-key-status" id="claudeStatus"></span>
+                    Anthropic Claude API Key
+                </label>
+                <input
+                    type="password"
+                    id="claudeKeyInput"
+                    class="api-key-input"
+                    placeholder="sk-ant-..."
+                    autocomplete="off"
+                />
+                <div class="api-info">
+                    Get your key at: <a href="https://console.anthropic.com" target="_blank" style="color: #60a5fa;">console.anthropic.com</a>
+                </div>
+            </div>
+
+            <!-- OpenAI API Key -->
+            <div class="api-key-group">
+                <label class="api-key-label">
+                    <span class="api-key-status" id="openaiStatus"></span>
+                    OpenAI API Key
+                </label>
+                <input
+                    type="password"
+                    id="openaiKeyInput"
+                    class="api-key-input"
+                    placeholder="sk-..."
+                    autocomplete="off"
+                />
+                <div class="api-info">
+                    Get your key at: <a href="https://platform.openai.com/api-keys" target="_blank" style="color: #60a5fa;">platform.openai.com/api-keys</a>
+                </div>
+            </div>
+
+            <!-- Backend Proxy URL (Required) -->
+            <div class="api-key-group">
+                <label class="api-key-label">
+                    Backend Proxy URL (Required)
+                </label>
+                <input
+                    type="text"
+                    id="backendProxyInput"
+                    class="api-key-input"
+                    placeholder="https://your-proxy-url.onrender.com"
+                    autocomplete="off"
+                />
+                <div class="api-info">
+                    Backend proxy to handle CORS. Deploy server.js on Render.com or similar. <br>
+                    Example: https://synthesizer-proxy.onrender.com<br>
+                    Leave empty to call APIs directly.
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button id="saveKeysBtn" class="btn-save">Save Keys</button>
+                <button id="clearKeysBtn" class="btn-clear">Clear All Keys</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load AI Service and Synthesis Logic -->
+    <script src="js/clientAiService.js"></script>
+    <script src="js/synthesisClient.js"></script>
+
+    <script>
+        // Wait for scripts to load
+        function waitForScripts(callback) {
+            if (window.AIService) {
+                callback();
+            } else {
+                setTimeout(() => waitForScripts(callback), 100);
+            }
+        }
+
+        waitForScripts(function() {
+        const promptInput = document.getElementById('promptInput');
+        const submitBtn = document.getElementById('submitBtn');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const resetBtn = document.getElementById('resetBtn');
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        // Settings Modal Elements
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+        const saveKeysBtn = document.getElementById('saveKeysBtn');
+        const clearKeysBtn = document.getElementById('clearKeysBtn');
+        const geminiKeyInput = document.getElementById('geminiKeyInput');
+        const claudeKeyInput = document.getElementById('claudeKeyInput');
+        const openaiKeyInput = document.getElementById('openaiKeyInput');
+        const backendProxyInput = document.getElementById('backendProxyInput');
+        const geminiStatus = document.getElementById('geminiStatus');
+        const claudeStatus = document.getElementById('claudeStatus');
+        const openaiStatus = document.getElementById('openaiStatus');
+
+        console.log('DOM elements loaded:', { saveKeysBtn, backendProxyInput });
+
+        // Settings Modal Logic
+        async function updateKeyStatuses() {
+            // Check localStorage for configured keys (client-side only)
+            const hasGemini = localStorage.getItem('gemini_api_key') !== null;
+            const hasClaude = localStorage.getItem('claude_api_key') !== null;
+            const hasOpenAI = localStorage.getItem('openai_api_key') !== null;
+
+            geminiStatus.classList.toggle('configured', hasGemini);
+            claudeStatus.classList.toggle('configured', hasClaude);
+            openaiStatus.classList.toggle('configured', hasOpenAI);
+        }
+
+        function loadKeysIntoForm() {
+            // Note: Don't load actual keys into form for security
+            // Just show they're configured via status indicator
+            geminiKeyInput.value = '';
+            claudeKeyInput.value = '';
+            openaiKeyInput.value = '';
+            backendProxyInput.value = localStorage.getItem('backend_proxy_url') || '';
+            updateKeyStatuses();
+        }
+
+        settingsBtn.addEventListener('click', () => {
+            settingsModal.classList.add('active');
+            loadKeysIntoForm();
+        });
+
+        closeSettingsBtn.addEventListener('click', () => {
+            settingsModal.classList.remove('active');
+        });
+
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) {
+                settingsModal.classList.remove('active');
+            }
+        });
+
+        saveKeysBtn.addEventListener('click', () => {
+            console.log('Save button clicked');
+            const gemini = geminiKeyInput.value.trim();
+            const claude = claudeKeyInput.value.trim();
+            const openai = openaiKeyInput.value.trim();
+            const backendProxy = backendProxyInput.value.trim();
+
+            console.log('Form values:', { gemini: !!gemini, claude: !!claude, openai: !!openai, backendProxy });
+
+            if (!backendProxy) {
+                alert('Backend proxy URL is required!');
+                return;
+            }
+
+            if (gemini) localStorage.setItem('gemini_api_key', gemini);
+            if (claude) localStorage.setItem('claude_api_key', claude);
+            if (openai) localStorage.setItem('openai_api_key', openai);
+            if (backendProxy) localStorage.setItem('backend_proxy_url', backendProxy);
+
+            console.log('Saved to localStorage:', { backendProxy: localStorage.getItem('backend_proxy_url') });
+
+            updateKeyStatuses();
+            alert('API keys and backend proxy saved successfully!');
+            settingsModal.classList.remove('active');
+        });
+
+        clearKeysBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear all API keys? This cannot be undone.')) {
+                localStorage.removeItem('gemini_api_key');
+                localStorage.removeItem('claude_api_key');
+                localStorage.removeItem('openai_api_key');
+                geminiKeyInput.value = '';
+                claudeKeyInput.value = '';
+                openaiKeyInput.value = '';
+                updateKeyStatuses();
+                alert('All API keys cleared.');
+            }
+        });
+
+        // Initialize key statuses on page load
+        updateKeyStatuses();
+
+        // Tab switching
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                tabButtons.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(content => content.style.display = 'none');
+
+                button.classList.add('active');
+                const tabName = button.getAttribute('data-tab');
+                document.getElementById(`${tabName}Content`).style.display = 'block';
+            });
+        });
+
+        // Submit handler - now using client-side synthesis with real-time updates
+        submitBtn.addEventListener('click', async () => {
+            const prompt = promptInput.value.trim();
+            if (!prompt) {
+                alert('Please enter a prompt');
+                return;
+            }
+
+            // Check if all API keys are configured in localStorage
+            const geminiKey = localStorage.getItem('gemini_api_key');
+            const claudeKey = localStorage.getItem('claude_api_key');
+            const openaiKey = localStorage.getItem('openai_api_key');
+
+            if (!geminiKey || !claudeKey || !openaiKey) {
+                alert('Please configure all API keys in Settings before running synthesis.');
+                settingsModal.classList.add('active');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            const btnText = submitBtn.querySelector('#btnText');
+            const originalText = btnText.textContent;
+            btnText.textContent = 'Processing...';
+
+            resultsContainer.style.display = 'block';
+            document.getElementById('processingStatus').textContent = 'Initializing synthesis...';
+            document.getElementById('processingTime').textContent = '⏳';
+
+            const startTime = Date.now();
+            let extractedData = null;
+
+            try {
+                // Get Round 1 responses with real-time updates
+                const { callGemini, callClaude, callOpenAI } = window.AIService;
+
+                document.getElementById('processingStatus').textContent = 'Round 1: Getting responses from all three models...';
+
+                // Call all three in parallel with error handling
+                let round1Results;
+                try {
+                    round1Results = await Promise.all([
+                        callGemini(prompt),
+                        callClaude(prompt),
+                        callOpenAI(prompt)
+                    ]);
+                } catch (error) {
+                    throw new Error(`Round 1 failed: ${error.message}. Check your API keys and internet connection.`);
+                }
+
+                // Display Round 1 results immediately
+                document.getElementById('gemini-r1').textContent = round1Results[0].content;
+                document.getElementById('claude-r1').textContent = round1Results[1].content;
+                document.getElementById('openai-r1').textContent = round1Results[2].content;
+
+                // Do Round 2
+                document.getElementById('processingStatus').textContent = 'Round 2: Refining responses...';
+
+                const round2Prompts = [
+                    `Original prompt response from Claude and ChatGPT:\n\nClaude: ${round1Results[1].content}\n\nChatGPT: ${round1Results[2].content}\n\nPlease refine your previous response considering these perspectives.`,
+                    `Original prompt response from Gemini and ChatGPT:\n\nGemini: ${round1Results[0].content}\n\nChatGPT: ${round1Results[2].content}\n\nPlease refine your previous response considering these perspectives.`,
+                    `Original prompt response from Gemini and Claude:\n\nGemini: ${round1Results[0].content}\n\nClaude: ${round1Results[1].content}\n\nPlease refine your previous response considering these perspectives.`,
+                ];
+
+                let round2Results;
+                try {
+                    round2Results = await Promise.all([
+                        callGemini(round2Prompts[0]),
+                        callClaude(round2Prompts[1]),
+                        callOpenAI(round2Prompts[2])
+                    ]);
+                } catch (error) {
+                    throw new Error(`Round 2 failed: ${error.message}`);
+                }
+
+                // Display Round 2 results
+                document.getElementById('gemini-r2').textContent = round2Results[0].content;
+                document.getElementById('claude-r2').textContent = round2Results[1].content;
+                document.getElementById('openai-r2').textContent = round2Results[2].content;
+
+                // Do final merge (Step 3)
+                document.getElementById('processingStatus').textContent = 'Final: Synthesizing all responses...';
+
+                const mergePrompt = `You are a synthesis expert. Merge the following three AI responses into a single coherent, high-quality output that combines the best insights from all three:
+
+Gemini Response:
+${round2Results[0].content}
+
+Claude Response:
+${round2Results[1].content}
+
+ChatGPT Response:
+${round2Results[2].content}
+
+Create a final merged response that synthesizes the best parts of all three, avoiding redundancy while maintaining completeness and accuracy.`;
+
+                let mergedResponse;
+                try {
+                    mergedResponse = await callClaude(mergePrompt);
+                } catch (error) {
+                    throw new Error(`Final synthesis failed: ${error.message}`);
+                }
+
+                // Display final result
+                document.getElementById('mergedOutput').textContent = mergedResponse.content;
+                document.getElementById('processingStatus').textContent = 'Synthesis complete!';
+
+                // Update status and time
+                const totalTime = Date.now() - startTime;
+                const seconds = (totalTime / 1000).toFixed(2);
+                document.getElementById('processingTime').textContent = `${seconds}s`;
+                document.getElementById('processingStatus').textContent = 'Complete!';
+
+            } catch (error) {
+                console.error('Synthesis error:', error);
+                alert('Error: ' + error.message);
+                resultsContainer.style.display = 'none';
+            } finally {
+                submitBtn.disabled = false;
+                btnText.textContent = originalText;
+            }
+        });
+
+        // Reset handler
+        resetBtn.addEventListener('click', () => {
+            promptInput.value = '';
+            resultsContainer.style.display = 'none';
+            tabButtons[0].click();
+        });
+
+        function displayResults(data) {
+            // Round 1 responses
+            document.getElementById('gemini-r1').textContent = data.rounds[0].responses[0].content;
+            document.getElementById('claude-r1').textContent = data.rounds[0].responses[1].content;
+            document.getElementById('openai-r1').textContent = data.rounds[0].responses[2].content;
+
+            // Round 2 responses
+            document.getElementById('gemini-r2').textContent = data.rounds[1].responses[0].content;
+            document.getElementById('claude-r2').textContent = data.rounds[1].responses[1].content;
+            document.getElementById('openai-r2').textContent = data.rounds[1].responses[2].content;
+
+            // Merged output
+            document.getElementById('mergedOutput').textContent = data.finalMergedOutput;
+
+            // Processing time
+            const seconds = (data.totalTime / 1000).toFixed(2);
+            document.getElementById('processingTime').textContent = `${seconds}s`;
+            document.getElementById('processingStatus').textContent = 'Complete!';
+        }
+        }); // Close waitForScripts callback
+    </script>
+</body>
+</html>

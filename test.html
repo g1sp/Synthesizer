@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Script Loading Test</title>
+</head>
+<body>
+    <h1>Testing Script Loads</h1>
+    <div id="status">Loading...</div>
+
+    <script src="js/clientAiService.js"></script>
+    <script src="js/synthesisClient.js"></script>
+
+    <script>
+        setTimeout(() => {
+            let status = 'Status: ';
+            if (window.clientAiService) {
+                status += '✅ clientAiService loaded | ';
+            } else {
+                status += '❌ clientAiService NOT loaded | ';
+            }
+            
+            if (window.synthesisClient) {
+                status += '✅ synthesisClient loaded';
+            } else {
+                status += '❌ synthesisClient NOT loaded';
+            }
+            
+            document.getElementById('status').innerHTML = status;
+            
+            if (window.clientAiService && window.synthesisClient) {
+                document.body.innerHTML += '<p style="color: green; font-size: 20px;">✅ ALL SCRIPTS LOADED SUCCESSFULLY!</p>';
+            } else {
+                document.body.innerHTML += '<p style="color: red; font-size: 20px;">❌ SCRIPTS FAILED TO LOAD</p>';
+            }
+        }, 500);
+    </script>
+</body>
+</html>
